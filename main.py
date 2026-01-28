@@ -257,40 +257,12 @@ async def smart_attendance(
                 }
             }
         else:
-            # NEW USER - Auto-register
-            new_user_id = str(uuid.uuid4())
-            
-            # Save new employee with face embedding
-            new_employee_data = {
-                "id": new_user_id,
-                "face_embedding": new_embedding,
-                "office_id": office_id
-            }
-            supabase.table("employees").insert(new_employee_data).execute()
-
-            # Also log first attendance with location data
-            log_data = {
-                "user_id": new_user_id,
-                "office_id": office_id,
-                "confidence_score": wifi_confidence,
-                "status": "present",
-                "timestamp": timestamp_str,
-                "latitude": latitude,
-                "longitude": longitude
-            }
-            supabase.table("attendance_logs").insert(log_data).execute()
-
+            # UNKNOWN FACE - Reject (don't auto-register)
+            # User must register through the app's Onboarding flow first
             return {
-                "success": True,
-                "action": "registered",
-                "message": "New face registered! Your employee ID has been created.",
-                "user_id": new_user_id,
-                "timestamp": timestamp_str,
-                "is_new_user": True,
-                "location": {
-                    "latitude": latitude,
-                    "longitude": longitude
-                }
+                "success": False,
+                "action": "face_not_found",
+                "message": "Face not recognized. Please register first through the app or contact your administrator."
             }
 
     except HTTPException as he:
