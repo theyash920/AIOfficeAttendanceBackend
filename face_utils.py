@@ -1,4 +1,3 @@
-
 from deepface import DeepFace
 import numpy as np
 import cv2
@@ -53,7 +52,7 @@ def get_face_embedding(image_bytes):
     except Exception as e:
         return None, str(e)
 
-def compare_faces(known_embedding, new_embedding, threshold=0.50):
+def compare_faces(known_embedding, new_embedding, threshold=0.40):
     """
     Compare two ArcFace embeddings using Cosine Similarity.
     DeepFace default threshold for ArcFace is usually around 0.50.
