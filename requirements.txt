@@ -1,11 +1,11 @@
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
-tensorflow-cpu==2.15.0
-deepface==0.0.89
-numpy==1.24.3
+tensorflow==2.18.0
+deepface==0.0.97
+numpy==2.0.2
 supabase==2.11.0
 python-multipart==0.0.20
-opencv-python-headless==4.8.1.78
+opencv-python-headless==4.10.0.84
 python-dotenv==1.0.1
 requests==2.32.3
 pytz==2024.2
