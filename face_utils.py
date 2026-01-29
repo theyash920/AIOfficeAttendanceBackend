@@ -30,7 +30,7 @@ def get_face_embedding(image_bytes):
         embedding_objs = DeepFace.represent(
             img_path=img,
             model_name="ArcFace",
-            detector_backend="retinaface",  # Most accurate detector
+            detector_backend="opencv",  # Lightweight detector for low memory environments
             enforce_detection=True,
             align=True
         )
