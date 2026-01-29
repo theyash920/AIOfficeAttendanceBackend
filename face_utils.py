@@ -1,22 +1,23 @@
-import face_recognition
+from deepface import DeepFace
 import numpy as np
 import cv2
+import os
+import tempfile
+
+# Suppress TensorFlow warnings
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'
 
 def load_image_from_bytes(image_bytes):
     """
-    Load image from bytes into a numpy array (RGB for face_recognition).
+    Load image from bytes into a numpy array (BGR for OpenCV/DeepFace).
     """
     nparr = np.frombuffer(image_bytes, np.uint8)
     img_bgr = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-    if img_bgr is None:
-        return None
-    # Convert BGR to RGB (face_recognition uses RGB)
-    img_rgb = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2RGB)
-    return img_rgb
+    return img_bgr
 
 def get_face_embedding(image_bytes):
     """
-    Detects a face in the image and returns its 128-d embedding.
+    Detects a face in the image and returns its 128-d embedding using DeepFace.
     Returns (embedding, error_message).
     """
     try:
@@ -24,31 +25,47 @@ def get_face_embedding(image_bytes):
         if img is None:
             return None, "Invalid image data"
 
-        # Detect face locations
-        face_locations = face_recognition.face_locations(img, model="hog")
-        
-        if not face_locations:
-            return None, "No face detected"
+        # Create a temporary file to save the image (DeepFace works better with file paths)
+        with tempfile.NamedTemporaryFile(suffix='.jpg', delete=False) as tmp_file:
+            tmp_path = tmp_file.name
+            cv2.imwrite(tmp_path, img)
+
+        try:
+            # Use Facenet model for 128-d embeddings (lightweight and accurate)
+            embedding_objs = DeepFace.represent(
+                img_path=tmp_path,
+                model_name="Facenet",
+                enforce_detection=True,
+                detector_backend="opencv"  # Lightweight detector
+            )
             
-        if len(face_locations) > 1:
-            return None, "Multiple faces detected. Please show only one face."
+            if not embedding_objs:
+                return None, "No face detected"
+            
+            if len(embedding_objs) > 1:
+                return None, "Multiple faces detected. Please show only one face."
+            
+            # Return the embedding as a list
+            embedding = embedding_objs[0]["embedding"]
+            return embedding, None
+            
+        finally:
+            # Clean up temp file
+            if os.path.exists(tmp_path):
+                os.remove(tmp_path)
 
-        # Get face encoding (128-dimensional)
-        face_encodings = face_recognition.face_encodings(img, face_locations)
-        
-        if not face_encodings:
-            return None, "Could not generate face encoding"
-
-        # Return the first embedding as a list
-        return face_encodings[0].tolist(), None
-
+    except ValueError as e:
+        error_str = str(e)
+        if "Face could not be detected" in error_str:
+            return None, "No face detected"
+        return None, error_str
     except Exception as e:
         return None, str(e)
 
-def compare_faces(known_embedding, new_embedding, threshold=0.6):
+def compare_faces(known_embedding, new_embedding, threshold=10.0):
     """
     Compare two face embeddings using Euclidean distance.
-    face_recognition default threshold is 0.6.
+    DeepFace Facenet threshold is typically around 10.0 for Euclidean distance.
     Returns True if match, False otherwise.
     """
     if known_embedding is None or new_embedding is None:
@@ -83,7 +100,7 @@ def compare_faces(known_embedding, new_embedding, threshold=0.6):
         print(f"[compare_faces] Failed to normalize embeddings")
         return False
 
-    # Validate dimensions (face_recognition produces 128-d embeddings)
+    # Validate dimensions (Facenet produces 128-d embeddings)
     if len(known) != len(new):
         print(f"[compare_faces] Dimension mismatch: known={len(known)}, new={len(new)}")
         return False
